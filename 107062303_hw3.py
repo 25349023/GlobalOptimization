@@ -7,7 +7,7 @@ import sourcedefender
 from HomeworkFramework import Function
 
 
-class RS_optimizer(Function):  # need to inherit this class "Function"
+class RSOptimizer(Function):  # need to inherit this class "Function"
     def __init__(self, target_func):
         super().__init__(target_func)  # must have this init to work normally
 
@@ -24,14 +24,13 @@ class RS_optimizer(Function):  # need to inherit this class "Function"
     def get_optimal(self):
         return self.optimal_solution, self.optimal_value
 
-    def run(self, FES):  # main part for your implementation
-
-        while self.eval_times < FES:
+    def run(self, fes):  # main part for your implementation
+        while self.eval_times < fes:
             print('=====================FE=====================')
             print(self.eval_times)
 
-            solution = np.random.uniform(np.full(self.dim, self.lower), np.full(self.dim, self.upper), self.dim)
-            value = self.f.evaluate(func_num, solution)
+            solution = np.random.uniform(self.lower, self.upper, self.dim)
+            value = self.f.evaluate(self.target_func, solution)
             self.eval_times += 1
 
             if value == "ReachFunctionLimit":
@@ -103,7 +102,6 @@ class DEOptimizer(Function):  # need to inherit this class "Function"
         return self.optimal_solution, self.optimal_value
 
     def run(self, fes):  # main part for your implementation
-
         while self.eval_times < fes:
             print('=====================FE=====================')
             print(self.eval_times)
