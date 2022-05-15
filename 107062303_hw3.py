@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 
 # you must use python 3.6, 3.7, 3.8, 3.9 for sourcedefender
@@ -42,6 +44,75 @@ class RS_optimizer(Function):  # need to inherit this class "Function"
             print("optimal: {}\n".format(self.get_optimal()[1]))
 
 
+class DEOptimizer(Function):  # need to inherit this class "Function"
+    def __init__(self, target_func, candidate_factor=6):
+        super().__init__(target_func)  # must have this init to work normally
+
+        self.lower = self.f.lower(target_func)
+        self.upper = self.f.upper(target_func)
+        self.dim = self.f.dimension(target_func)
+        self.num_candidate = candidate_factor * self.dim
+
+        self.target_func = target_func
+
+        self.eval_times = 0
+        self.optimal_value = float("inf")
+        self.optimal_solution = np.empty(self.dim)
+
+        self.theta = np.random.uniform(self.lower, self.upper, (self.dim, self.num_candidate))
+        self.F = 0.25
+        self.CR = 0.9
+
+    def mutation(self):
+        v = np.zeros_like(self.theta)
+        for i in range(self.num_candidate):
+            p, q, r = random.sample(range(self.num_candidate), 3)
+            v[:, i] = self.theta[:, p] + self.F * (self.theta[:, q] - self.theta[:, r])
+        return v
+
+    def recombination(self, v):
+        rand = np.random.rand(self.dim, self.num_candidate)
+        u = np.where(rand <= self.CR, v, self.theta)
+        i_rand = random.randrange(0, self.dim)
+        u[i_rand] = v[i_rand]
+        return np.clip(u, self.lower, self.upper)
+
+    def selection(self, u):
+        theta = self.theta.copy()
+        for i in range(self.num_candidate):
+            value = self.f.evaluate(self.target_func, self.theta[:, i])
+            new_value = self.f.evaluate(self.target_func, u[:, i])
+
+            self.eval_times += 1
+            if 'ReachFunctionLimit' in (value, new_value):
+                print('ReachFunctionLimit')
+                break
+            if value < self.optimal_value:
+                self.optimal_solution[:] = self.theta[:, i]
+                self.optimal_value = value
+
+            theta[:, i] = u[:, i] if new_value < value else self.theta[:, i]
+        return theta
+
+    def optimization_loop(self):
+        v = self.mutation()
+        u = self.recombination(v)
+        self.theta = self.selection(u)
+
+    def get_optimal(self):
+        return self.optimal_solution, self.optimal_value
+
+    def run(self, fes):  # main part for your implementation
+
+        while self.eval_times < fes:
+            print('=====================FE=====================')
+            print(self.eval_times)
+
+            self.optimization_loop()
+
+            print("optimal: {}\n".format(self.get_optimal()[1]))
+
+
 if __name__ == '__main__':
     func_num = 1
     fes = 0
@@ -57,7 +128,7 @@ if __name__ == '__main__':
             fes = 2500
 
         # you should implement your optimizer
-        op = RS_optimizer(func_num)
+        op = DEOptimizer(func_num)
         op.run(fes)
 
         best_input, best_value = op.get_optimal()
