@@ -107,10 +107,11 @@ class DEOptimizer(Function):  # need to inherit this class "Function"
         self.eval_times = 0
         self.optimal_value = float("inf")
         self.optimal_solution = np.empty(self.dim)
+        self.last_evaluation = [float('inf') for _ in range(self.num_candidate)]
 
         self.theta = np.random.uniform(self.lower, self.upper, (self.dim, self.num_candidate))
         self.strategy = Rand1Bin
-        self.F = 0.25
+        self.F = 0.8
         self.CR = 0.9
 
     def mutation(self):
@@ -126,18 +127,20 @@ class DEOptimizer(Function):  # need to inherit this class "Function"
     def selection(self, u):
         theta = self.theta.copy()
         for i in range(self.num_candidate):
-            value = self.f.evaluate(self.target_func, self.theta[:, i])
+            # value = self.f.evaluate(self.target_func, self.theta[:, i])
             new_value = self.f.evaluate(self.target_func, u[:, i])
 
-            self.eval_times += 2
-            if 'ReachFunctionLimit' in (value, new_value):
+            self.eval_times += 1
+            if new_value == 'ReachFunctionLimit':
                 print('ReachFunctionLimit')
                 break
             if new_value < self.optimal_value:
                 self.optimal_solution[:] = self.theta[:, i]
                 self.optimal_value = new_value
 
-            theta[:, i] = u[:, i] if new_value < value else self.theta[:, i]
+            if new_value < self.last_evaluation[i]:
+                theta[:, i] = u[:, i]
+                self.last_evaluation[i] = new_value
         return theta
 
     def optimization_loop(self):
@@ -163,16 +166,16 @@ class CoDEOptimizer(DEOptimizer):
         super().__init__(target_func, candidate_factor)
 
         self.strategy_pool = [Rand1Bin, Rand2Bin, CurrentToRand1]
-        self.param_pool = [(1.0, 0.1), (0.3, 0.9), (0.8, 0.2)]
+        self.param_pool = [(1.0, 0.3), (0.8, 0.9), (0.9, 0.2)]
 
     def selection(self, us):
         theta = self.theta.copy()
         for i in range(self.num_candidate):
-            value = self.f.evaluate(self.target_func, self.theta[:, i])
+            # value = self.f.evaluate(self.target_func, self.theta[:, i])
             new_values = [self.f.evaluate(self.target_func, u[:, i]) for u in us]
 
-            self.eval_times += 1 + len(new_values)
-            if 'ReachFunctionLimit' in (value, *new_values):
+            self.eval_times += len(new_values)
+            if 'ReachFunctionLimit' in new_values:
                 print('ReachFunctionLimit')
                 break
 
@@ -182,7 +185,11 @@ class CoDEOptimizer(DEOptimizer):
                 self.optimal_solution[:] = self.theta[:, i]
                 self.optimal_value = min_value
 
-            theta[:, i] = us[min_arg][:, i] if min_value < value else self.theta[:, i]
+            if min_value < self.last_evaluation[i]:
+                theta[:, i] = us[min_arg][:, i]
+                self.last_evaluation[i] = min_value
+
+            # theta[:, i] = us[min_arg][:, i] if min_value < self.last_evaluation else self.theta[:, i]
         return theta
 
     def optimization_loop(self):
@@ -201,8 +208,6 @@ if __name__ == '__main__':
     fes = 0
 
     # for CoDE
-    # random.seed(10)
-    # np.random.seed(14)
     # random.seed(1)
     # np.random.seed(10)
 
