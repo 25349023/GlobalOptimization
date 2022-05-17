@@ -94,13 +94,13 @@ class CurrentToRand1(Strategy):
 
 
 class DEOptimizer(Function):  # need to inherit this class "Function"
-    def __init__(self, target_func, candidate_factor=6):
+    def __init__(self, target_func, candidate_count=10):
         super().__init__(target_func)  # must have this init to work normally
 
         self.lower = self.f.lower(target_func)
         self.upper = self.f.upper(target_func)
         self.dim = self.f.dimension(target_func)
-        self.num_candidate = candidate_factor * self.dim
+        self.num_candidate = candidate_count
 
         self.target_func = target_func
 
@@ -159,11 +159,11 @@ class DEOptimizer(Function):  # need to inherit this class "Function"
 
 
 class CoDEOptimizer(DEOptimizer):
-    def __init__(self, target_func, candidate_factor=6):
+    def __init__(self, target_func, candidate_factor=10):
         super().__init__(target_func, candidate_factor)
 
         self.strategy_pool = [Rand1Bin, Rand2Bin, CurrentToRand1]
-        self.param_pool = [(1.0, 0.3), (1.0, 0.9), (0.4, 0.2), (0.25, 0.9)]
+        self.param_pool = [(1.0, 0.1), (0.3, 0.9), (0.8, 0.2)]
 
     def selection(self, us):
         theta = self.theta.copy()
@@ -199,6 +199,14 @@ class CoDEOptimizer(DEOptimizer):
 if __name__ == '__main__':
     func_num = 1
     fes = 0
+
+    # for CoDE
+    # random.seed(10)
+    # np.random.seed(14)
+    # random.seed(1)
+    # np.random.seed(10)
+
+
     # function1: 1000, function2: 1500, function3: 2000, function4: 2500
     for func_num in range(1, 5):
         if func_num == 1:
@@ -211,7 +219,7 @@ if __name__ == '__main__':
             fes = 2500
 
         # you should implement your optimizer
-        op = CoDEOptimizer(func_num, 5)
+        op = CoDEOptimizer(func_num, 10)
         op.run(fes)
 
         best_input, best_value = op.get_optimal()
